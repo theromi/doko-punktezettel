@@ -1,4 +1,4 @@
-const CACHE = 'punktezettel-v2';
+const CACHE = 'punktezettel-v3';
 const CACHE_PREFIX = 'punktezettel-';
 const MAX_RUNTIME_ENTRIES = 40;
 // Deploy: any static host. HTTPS required for service worker (localhost exempt).
@@ -13,12 +13,13 @@ const ASSETS = [
   './js/ui.js',
   './js/graph.js',
   './manifest.webmanifest',
+  './favicon.ico',
+  './apple-touch-icon.png',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-192.png',
   './icons/icon-maskable-512.png',
-  './icons/apple-touch-icon.png',
 ];
 
 
@@ -92,7 +93,7 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => {
           if (req.mode === 'navigate') return caches.match('./index.html', { ignoreSearch: true });
-          return caches.match('./index.html', { ignoreSearch: true });
+          return new Response('', { status: 404, statusText: 'Not Found' });
         });
     })
   );
