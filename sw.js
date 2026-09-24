@@ -1,4 +1,4 @@
-const CACHE = 'punktezettel-v3';
+const CACHE = 'punktezettel-v4';
 const CACHE_PREFIX = 'punktezettel-';
 const MAX_RUNTIME_ENTRIES = 40;
 // Deploy: any static host. HTTPS required for service worker (localhost exempt).

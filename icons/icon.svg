@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Punktezettel">
-  <rect width="512" height="512" rx="96" fill="#1b5e20"/>
+  <rect width="512" height="512" fill="#1b5e20"/>
   <g transform="rotate(-15 208 244)">
     <rect x="118" y="118" width="180" height="252" rx="16" fill="#e2ddd2"/>
     <rect x="134" y="134" width="148" height="220" rx="12" fill="none" stroke="#b3261e" stroke-width="3.5" opacity="0.28"/>
