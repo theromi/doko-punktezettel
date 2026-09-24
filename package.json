@@ -1,0 +1,11 @@
+{
+  "name": "punktezettel",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node js/state.test.js",
+    "start": "python3 -m http.server 8080"
+  }
+}

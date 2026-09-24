@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Punktezettel</title>
+  <meta name="description" content="Doppelkopf-Punktezettel — bleibt auf dem Gerät, kein Konto, kein Server.">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f4ef">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141518">
+  <meta name="color-scheme" content="light dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Punktezettel">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <script defer src="js/state.js"></script>
+  <script defer src="js/storage.js"></script>
+  <script defer src="js/graph.js"></script>
+  <script defer src="js/ui.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <h1 class="app-title">Punktezettel</h1>
+      <label class="theme-control">
+        <span class="visually-hidden">Design</span>
+        <select id="theme-select" aria-label="Design">
+          <option value="system">System</option>
+          <option value="light">Hell</option>
+          <option value="dark">Dunkel</option>
+        </select>
+      </label>
+    </header>
+    <main id="screen" class="screen"></main>
+    <nav id="tabbar" class="tabbar" hidden aria-label="Ansichten" role="tablist">
+      <button type="button" class="tab" role="tab" data-tab="tabelle" aria-selected="true">Tabelle</button>
+      <button type="button" class="tab" role="tab" data-tab="verlauf" aria-selected="false" tabindex="-1">Verlauf</button>
+      <button type="button" class="tab" role="tab" data-tab="statistik" aria-selected="false" tabindex="-1">Statistik</button>
+    </nav>
+  </div>
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+  <dialog id="hand-sheet" class="sheet" aria-labelledby="sheet-title"></dialog>
+  <dialog id="confirm-dialog" class="confirm" aria-labelledby="confirm-title"></dialog>
+</body>
+</html>
