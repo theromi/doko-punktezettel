@@ -421,6 +421,10 @@ table.sheet td {
   border-top: 1px solid var(--border);
 }
 
+.tabbar[hidden] {
+  display: none;
+}
+
 .tab {
   flex: 1;
   min-height: var(--tap);

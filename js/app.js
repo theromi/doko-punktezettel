@@ -25,6 +25,8 @@
     },
 
     setTab(tab) {
+      // Tabs (Tabelle/Verlauf/Statistik) gibt es nur in einem laufenden Spiel.
+      if (!this.session) return;
       this.tab = tab;
       ui().renderActiveTab();
     },
