@@ -1,6 +1,7 @@
 (function (global) {
   const SESSION_KEY = 'punktezettel.session.v1';
   const THEME_KEY = 'punktezettel.theme.v1';
+  const LAST_PLAYERS_KEY = 'punktezettel.players.v1';
   const SUPPORTED_VERSION = 1;
 
   function safeGet(key) {
@@ -57,7 +58,7 @@
 
   function isValidHandShape(h, playerIds) {
     if (!h || typeof h.id !== 'string' || h.id.length === 0) return false;
-    if (!Number.isInteger(h.n) || h.n < 1 || h.n > 999) return false;
+    if (!Number.isInteger(h.n) || h.n < 0 || h.n > 999) return false;
     if (!Array.isArray(h.active) || (h.active.length !== 3 && h.active.length !== 4)) return false;
     if (!Array.isArray(h.winners)) return false;
     if (new Set(h.active).size !== h.active.length) return false;
@@ -82,6 +83,17 @@
     return null;
   }
 
+  function resetCorrupt(raw, reason) {
+    backupCorrupt(raw);
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch (e) {
+      // ignore
+    }
+    console.warn('Punktezettel: unreadable session (' + reason + '), reset');
+    return { reset: true, reason: reason };
+  }
+
   function loadSession() {
     const raw = safeGet(SESSION_KEY);
     if (raw == null) return null;
@@ -89,35 +101,24 @@
     try {
       data = JSON.parse(raw);
     } catch (e) {
-      backupCorrupt(raw);
-      return null;
+      return resetCorrupt(raw, 'json');
     }
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      backupCorrupt(raw);
-      return null;
+      return resetCorrupt(raw, 'shape');
     }
     if (data.version !== SUPPORTED_VERSION) {
-      backupCorrupt(raw);
-      try {
-        localStorage.removeItem(SESSION_KEY);
-      } catch (e) {
-        // ignore
-      }
-      console.warn('Punktezettel: unsupported session version, reset');
-      return { reset: true, reason: 'version' };
+      return resetCorrupt(raw, 'version');
     }
     if (!Array.isArray(data.players) || !Array.isArray(data.hands)) {
-      backupCorrupt(raw);
-      return null;
+      return resetCorrupt(raw, 'arrays');
     }
     const players = data.players
       .filter((p) => p && typeof p.id === 'string' && p.id.length > 0 && typeof p.name === 'string')
       .map((p) => ({ id: p.id, name: p.name.trim().slice(0, 20) }))
       .filter((p) => p.name.length > 0);
     const playerIds = players.map((p) => p.id);
-    if (players.length < 3 || players.length > 10 || new Set(playerIds).size !== playerIds.length) {
-      backupCorrupt(raw);
-      return null;
+    if (players.length < 3 || players.length > 6 || new Set(playerIds).size !== playerIds.length) {
+      return resetCorrupt(raw, 'players');
     }
     let dropped = 0;
     const hands = [];
@@ -135,6 +136,9 @@
       const clean = {
         id: h.id,
         n: h.n,
+        baseN: Number.isInteger(h.baseN) && h.baseN >= 0 && h.baseN <= 999 ? h.baseN : h.n,
+        bock: Boolean(h.bock),
+        fromBockQueue: Boolean(h.fromBockQueue),
         winners: h.winners.filter((id) => typeof id === 'string'),
         active: h.active.filter((id) => typeof id === 'string'),
         soloistId: typeof h.soloistId === 'string' ? h.soloistId : null,
@@ -150,7 +154,11 @@
     if (dropped > 0) {
       console.warn('Punktezettel: dropped ' + dropped + ' invalid hand(s) from stored session');
     }
-    return { players, hands };
+    const bockRemaining =
+      Number.isInteger(data.bockRemaining) && data.bockRemaining > 0
+        ? Math.min(99, data.bockRemaining)
+        : 0;
+    return { players, hands, bockRemaining };
   }
 
   let saveTimer = null;
@@ -162,6 +170,7 @@
       version: SUPPORTED_VERSION,
       players: session.players,
       hands: session.hands,
+      bockRemaining: session.bockRemaining || 0,
     });
     return safeSet(SESSION_KEY, payload);
   }
@@ -204,6 +213,7 @@
       clearTimeout(saveTimer);
       saveTimer = null;
     }
+    pendingSession = null;
     try {
       localStorage.removeItem(SESSION_KEY);
     } catch (e) {
@@ -221,6 +231,34 @@
     safeSet(THEME_KEY, mode);
   }
 
+  function loadLastPlayers() {
+    const raw = safeGet(LAST_PLAYERS_KEY);
+    if (!raw) return [];
+    try {
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      return arr
+        .filter((n) => typeof n === 'string')
+        .map((n) => n.trim().slice(0, 20))
+        .filter((n) => n.length > 0)
+        .slice(0, 6);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveLastPlayers(names) {
+    if (!Array.isArray(names)) return;
+    const clean = names
+      .filter((n) => typeof n === 'string')
+      .map((n) => n.trim().slice(0, 20))
+      .filter((n) => n.length > 0)
+      .slice(0, 6);
+    if (clean.length >= 3) {
+      safeSet(LAST_PLAYERS_KEY, JSON.stringify(clean));
+    }
+  }
+
   const storage = {
     loadSession,
     saveSession,
@@ -229,6 +267,8 @@
     clearSession,
     loadTheme,
     saveTheme,
+    loadLastPlayers,
+    saveLastPlayers,
   };
 
   global.Pz = global.Pz || {};

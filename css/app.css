@@ -268,6 +268,12 @@ h2 {
   font: inherit;
 }
 
+.setup-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .setup-error {
   color: var(--danger);
   margin: 8px 0 0;
@@ -278,8 +284,15 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .sheet-toolbar .sub {
@@ -332,6 +345,14 @@ table.sheet tfoot td {
   font-variant-numeric: tabular-nums;
 }
 
+table.sheet tbody tr[data-hand-index] {
+  cursor: pointer;
+}
+
+table.sheet tbody tr[data-hand-index]:hover {
+  background: var(--surface-2);
+}
+
 table.sheet tbody th {
   text-align: left;
   color: var(--muted);
@@ -357,7 +378,8 @@ table.sheet td {
   color: var(--pause);
 }
 
-.solo-badge {
+.solo-badge,
+.bock-badge {
   display: inline-block;
   margin-left: 6px;
   padding: 1px 6px;
@@ -369,6 +391,11 @@ table.sheet td {
   font-weight: 700;
   letter-spacing: 0.04em;
   vertical-align: middle;
+}
+
+.bock-badge {
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+  color: var(--fg);
 }
 
 .empty-state {
@@ -446,7 +473,7 @@ table.sheet td {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 20px);
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 84px);
   transform: translateX(-50%);
   z-index: 60;
   max-width: min(90vw, 420px);
@@ -575,6 +602,7 @@ dialog.confirm::backdrop {
 .chip.is-paused {
   opacity: 0.55;
   border-style: dashed;
+  cursor: default;
 }
 
 .chip .chip-sub {
@@ -624,9 +652,16 @@ dialog.confirm::backdrop {
   min-height: 3em;
 }
 
-.preview .solo-badge {
-  margin-left: 0;
+.preview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 6px;
+}
+
+.preview .solo-badge,
+.preview .bock-badge {
+  margin-left: 0;
 }
 
 .sheet-actions {

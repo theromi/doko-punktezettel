@@ -36,7 +36,7 @@
     const attr = document.documentElement.getAttribute('data-theme');
     if (attr === 'light') return 'light';
     if (attr === 'dark') return 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
   function palette() {
@@ -90,15 +90,8 @@
 
   function buildData(players, hands) {
     const totalsMap = state().totals(players, hands);
-    const points = players.map((p) => ({ id: p.id, name: p.name, ys: [0] }));
-    for (const hand of hands) {
-      const scores = state().scoreHand(hand);
-      for (const p of players) {
-        const s = scores[p.id] || 0;
-        const series = points.find((pt) => pt.id === p.id);
-        series.ys.push(series.ys[series.ys.length - 1] + s);
-      }
-    }
+    const seriesMap = state().series(players, hands);
+    const points = players.map((p) => ({ id: p.id, name: p.name, ys: seriesMap[p.id] || [0] }));
     const lastTotals = players.map((p) => p.name + ' ' + fmt(totalsMap[p.id])).join(', ');
     const summary = 'Kumulierte Punkte über ' + hands.length + ' Hände. Aktuelle Summen: ' + lastTotals;
     return { points, totalsMap, summary };

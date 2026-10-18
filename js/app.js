@@ -44,29 +44,32 @@
         return;
       }
       this.session = loaded;
+      storage().saveLastPlayers(loaded.players.map((p) => p.name));
       this.tab = 'tabelle';
       ui().renderGame();
     },
 
     newGame() {
+      if (this.session && this.session.players) {
+        storage().saveLastPlayers(this.session.players.map((p) => p.name));
+      } else {
+        const loaded = storage().loadSession();
+        if (loaded && loaded.players) {
+          storage().saveLastPlayers(loaded.players.map((p) => p.name));
+        }
+      }
       storage().clearSession();
       this.session = null;
-      ui().renderSetup();
+      ui().renderSetup(storage().loadLastPlayers());
     },
 
     startGame(players) {
-      this.session = { version: 1, players: players, hands: [] };
+      this.session = { version: 1, players: players, hands: [], bockRemaining: 0 };
+      storage().saveLastPlayers(players.map((p) => p.name));
       const ok = storage().saveSessionNow(this.session);
       if (!ok) ui().showToast('Speichern fehlgeschlagen — Speicher voll oder blockiert.');
       this.tab = 'tabelle';
       ui().renderGame();
-    },
-
-    persistOrWarn() {
-      if (!this.session) return true;
-      const ok = storage().saveSessionNow(this.session);
-      if (!ok) ui().showToast('Speichern fehlgeschlagen — Speicher voll oder blockiert.');
-      return ok;
     },
 
     addHand(entry) {
@@ -77,9 +80,16 @@
       const winners = entry.winners.slice();
       const check = state().validateEntry({ n: entry.n, winners: winners, active: active });
       if (!check.valid) return;
+      const fromBockQueue = Boolean(this.session.bockRemaining > 0);
+      if (fromBockQueue) {
+        this.session.bockRemaining = Math.max(0, this.session.bockRemaining - 1);
+      }
       const hand = {
         id: state().createId(),
         n: entry.n,
+        baseN: Number.isInteger(entry.baseN) ? entry.baseN : entry.n,
+        bock: Boolean(entry.bock),
+        fromBockQueue: fromBockQueue,
         winners: winners,
         active: active,
         soloistId: state().deriveSoloist(winners, active),
@@ -93,13 +103,73 @@
       });
     },
 
+    updateHand(index, entry) {
+      const hands = this.session.hands;
+      if (index < 0 || index >= hands.length) return;
+      const prev = hands[index];
+      const active = entry.active && entry.active.length ? entry.active.slice() : prev.active.slice();
+      const winners = entry.winners.slice();
+      const check = state().validateEntry({ n: entry.n, winners: winners, active: active });
+      if (!check.valid) return;
+      hands[index] = {
+        id: prev.id,
+        n: entry.n,
+        baseN: Number.isInteger(entry.baseN) ? entry.baseN : entry.n,
+        bock: Boolean(entry.bock),
+        fromBockQueue: Boolean(prev.fromBockQueue),
+        winners: winners,
+        active: active,
+        soloistId: state().deriveSoloist(winners, active),
+      };
+      storage().saveSession(this.session);
+      ui().renderActiveTab();
+      ui().showToast('Runde ' + (index + 1) + ' aktualisiert');
+    },
+
+    deleteHand(index) {
+      const hands = this.session.hands;
+      if (index < 0 || index >= hands.length) return;
+      const removed = hands.splice(index, 1)[0];
+      if (removed.fromBockQueue) {
+        this.session.bockRemaining = Math.min(99, (this.session.bockRemaining || 0) + 1);
+      }
+      storage().saveSession(this.session);
+      ui().renderActiveTab();
+      ui().showToast('Runde ' + (index + 1) + ' gelöscht · Rückgängig?', {
+        actionLabel: 'Wiederherstellen',
+        onAction: () => {
+          hands.splice(index, 0, removed);
+          if (removed.fromBockQueue) {
+            this.session.bockRemaining = Math.max(0, (this.session.bockRemaining || 0) - 1);
+          }
+          storage().saveSession(this.session);
+          ui().renderActiveTab();
+          ui().showToast('Runde ' + (index + 1) + ' wiederhergestellt');
+        },
+      });
+    },
+
     undo() {
       const hands = this.session.hands;
       if (!hands.length) return;
-      hands.pop();
+      this.deleteHand(hands.length - 1);
+    },
+
+    addBockRound() {
+      if (!this.session) return;
+      const count = this.session.players.length;
+      const prev = this.session.bockRemaining || 0;
+      this.session.bockRemaining = Math.min(99, prev + count);
       storage().saveSession(this.session);
       ui().renderActiveTab();
-      ui().showToast('Runde ' + (hands.length + 1) + ' gelöscht');
+      ui().showToast('Bockrunde (+' + count + ' Hände) aktiv', {
+        actionLabel: 'Rückgängig',
+        onAction: () => {
+          this.session.bockRemaining = prev;
+          storage().saveSession(this.session);
+          ui().renderActiveTab();
+        },
+      });
     },
   };
 
@@ -166,6 +236,8 @@
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol === 'file:') return;
     window.addEventListener('load', () => {
+      const hadController = Boolean(navigator.serviceWorker.controller);
+
       navigator.serviceWorker
         .register('sw.js')
         .then((reg) => {
@@ -187,7 +259,7 @@
 
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return;
+        if (!hadController || refreshing) return;
         refreshing = true;
         window.location.reload();
       });

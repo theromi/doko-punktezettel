@@ -1,6 +1,5 @@
-const CACHE = 'punktezettel-v4';
+const CACHE = 'punktezettel-v5';
 const CACHE_PREFIX = 'punktezettel-';
-const MAX_RUNTIME_ENTRIES = 40;
 // Deploy: any static host. HTTPS required for service worker (localhost exempt).
 // Classic scripts (no ES modules) work over HTTP(S); file:// is unsupported for SW.
 const ASSETS = [
@@ -25,15 +24,7 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) =>
-        cache.addAll(ASSETS).catch(() =>
-          // One 404 must not break offline install: best-effort per asset.
-          Promise.allSettled(ASSETS.map((url) => cache.add(url)))
-        )
-      )
-      .then(() => self.skipWaiting())
+    caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
   );
 });
 
@@ -56,16 +47,6 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-function trimRuntimeCache() {
-  return caches.open(CACHE).then((cache) =>
-    cache.keys().then((keys) => {
-      if (keys.length <= MAX_RUNTIME_ENTRIES) return;
-      const excess = keys.slice(0, keys.length - MAX_RUNTIME_ENTRIES);
-      return Promise.all(excess.map((req) => cache.delete(req)));
-    })
-  );
-}
-
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -84,10 +65,7 @@ self.addEventListener('fetch', (event) => {
         .then((res) => {
           if (res && res.status === 200 && res.type === 'basic') {
             const copy = res.clone();
-            caches
-              .open(CACHE)
-              .then((cache) => cache.put(req, copy))
-              .then(() => trimRuntimeCache());
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
           }
           return res;
         })

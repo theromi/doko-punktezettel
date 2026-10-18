@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const {
   suggestActive,
+  nextRoundInfo,
   scoreHand,
   totals,
   series,
@@ -86,14 +87,22 @@ test('scoreHand invariant sum==0 for all splits', () => {
   }
 });
 
-test('validateEntry accepts valid 4-player entry', () => {
+test('validateEntry accepts valid 4-player entry and N=0', () => {
   const r = validateEntry({ n: 2, winners: ['a', 'b'], active: ['a', 'b', 'c', 'd'] });
   assert.strictEqual(r.valid, true);
   assert.strictEqual(r.errors.length, 0);
+  const r0 = validateEntry({ n: 0, winners: ['a', 'b'], active: ['a', 'b', 'c', 'd'] });
+  assert.strictEqual(r0.valid, true);
+  assert.deepStrictEqual(scoreHand({ n: 0, winners: ['a'], active: ['a', 'b', 'c', 'd'] }), {
+    a: 0,
+    b: 0,
+    c: 0,
+    d: 0,
+  });
 });
 
 test('validateEntry rejects bad N, empty/all winners, winner not active', () => {
-  assert.strictEqual(validateEntry({ n: 0, winners: ['a'], active: ['a', 'b', 'c', 'd'] }).valid, false);
+  assert.strictEqual(validateEntry({ n: -1, winners: ['a'], active: ['a', 'b', 'c', 'd'] }).valid, false);
   assert.strictEqual(validateEntry({ n: 1000, winners: ['a'], active: ['a', 'b', 'c', 'd'] }).valid, false);
   assert.strictEqual(validateEntry({ n: 1.5, winners: ['a'], active: ['a', 'b', 'c', 'd'] }).valid, false);
   assert.strictEqual(validateEntry({ n: 1, winners: [], active: ['a', 'b', 'c', 'd'] }).valid, false);
@@ -213,22 +222,6 @@ test('6 players: opposite pair rotates fairly', () => {
   }
   const values = Object.values(sitCounts);
   assert.ok(Math.max(...values) - Math.min(...values) <= 1, JSON.stringify(sitCounts));
-});
-
-test('7 players sitters are spread around the table', () => {
-  const { idList, hands } = rotationRun(7, 21);
-  const P = idList.length;
-  for (const hand of hands) {
-    const sitters = idList.filter((id) => !hand.active.includes(id));
-    assert.strictEqual(sitters.length, 3);
-    const idxs = sitters.map((id) => idList.indexOf(id)).sort((a, b) => a - b);
-    const gaps = [];
-    for (let i = 0; i < idxs.length; i += 1) {
-      gaps.push((idxs[(i + 1) % idxs.length] - idxs[i] + P) % P);
-    }
-    const minGap = Math.min.apply(null, gaps);
-    assert.ok(minGap >= 2, 'sitters ' + sitters.join(',') + ' gaps ' + gaps.join(','));
-  }
 });
 
 test('rotation fairness 3 and 4 players never pause', () => {
@@ -357,7 +350,7 @@ test('activeCountFor', () => {
   assert.strictEqual(activeCountFor(3), 3);
   assert.strictEqual(activeCountFor(4), 4);
   assert.strictEqual(activeCountFor(5), 4);
-  assert.strictEqual(activeCountFor(10), 4);
+  assert.strictEqual(activeCountFor(6), 4);
 });
 
 test('formatPreview renders signs and solo values', () => {
@@ -368,6 +361,20 @@ test('formatPreview renders signs and solo values', () => {
     active: ['a', 'b', 'c', 'd'],
   });
   assert.strictEqual(text, 'S1 +6 · S2 −2 · S3 −2 · S4 −2');
+});
+
+test('nextRoundInfo returns dealer for 4 players and sitters for 5/6 players', () => {
+  const p4 = playersFrom(['a', 'b', 'c', 'd']);
+  const info4 = nextRoundInfo(p4, []);
+  assert.strictEqual(info4.sitters.length, 0);
+  assert.strictEqual(info4.dealer.id, 'a');
+  const info4Next = nextRoundInfo(p4, [{ id: 'h1', n: 1, winners: ['a', 'b'], active: ['a', 'b', 'c', 'd'] }]);
+  assert.strictEqual(info4Next.dealer.id, 'b');
+
+  const p5 = playersFrom(['p0', 'p1', 'p2', 'p3', 'p4']);
+  const info5 = nextRoundInfo(p5, []);
+  assert.deepStrictEqual(info5.sitters.map((p) => p.id), ['p4']);
+  assert.strictEqual(info5.dealer.id, 'p4');
 });
 
 console.log(`\n${passed} tests passed`);

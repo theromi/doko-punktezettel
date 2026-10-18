@@ -47,8 +47,12 @@
     const n = hand.n;
     const winners = hand.winners;
     const active = hand.active;
-    const winnerSet = new Set(winners);
     const scores = {};
+    if (n === 0) {
+      for (const id of active) scores[id] = 0;
+      return scores;
+    }
+    const winnerSet = new Set(winners);
     const soloistId = deriveSoloist(winners, active);
     if (soloistId !== null) {
       const k = active.length - 1;
@@ -71,8 +75,8 @@
     const winners = entry && Array.isArray(entry.winners) ? entry.winners : null;
     const active = entry && Array.isArray(entry.active) ? entry.active : null;
 
-    if (!Number.isInteger(n) || n < 1 || n > 999) {
-      errors.push('N muss eine ganze Zahl von 1 bis 999 sein.');
+    if (!Number.isInteger(n) || n < 0 || n > 999) {
+      errors.push('N muss eine ganze Zahl von 0 bis 999 sein.');
     }
     if (!active || (active.length !== 3 && active.length !== 4)) {
       errors.push('Es müssen 3 oder 4 aktive Spieler im Spiel sein.');
@@ -181,12 +185,17 @@
     return ids.filter((id) => sitters.indexOf(id) === -1);
   }
 
-  function suggestSwapOut(activeOrder, hands) {
-    return pickHeadToDrop(activeOrder, hands, false);
-  }
-
-  function suggestSwapIn(playerIds, activeOrder, hands) {
-    return pickTailToAppend(playerIds, activeOrder, hands);
+  function nextRoundInfo(players, hands) {
+    const active = suggestActive(players, hands);
+    const activeSet = new Set(active);
+    const sitters = players.filter((p) => !activeSet.has(p.id));
+    const dealer =
+      sitters.length > 0
+        ? sitters[0]
+        : players.length > 0
+          ? players[hands.length % players.length]
+          : null;
+    return { active, sitters, dealer };
   }
 
   function totals(players, hands) {
@@ -270,8 +279,7 @@
     pickHeadToDrop,
     pickTailToAppend,
     suggestActive,
-    suggestSwapOut,
-    suggestSwapIn,
+    nextRoundInfo,
     totals,
     series,
     stats,
